@@ -1,0 +1,161 @@
+---
+title: "Data Analytics Club Workshop 2"
+format: html
+editor: visual
+---
+
+This code is for a workshop I attended as a participant for the data wrangling process. The new things I learned were to use gsub to get rid of unwanted entries for character variables, use the Janitor package to format character variables, and use xray for summary statistics.
+
+## Data Wrangling Process
+
+Step 1: Import the data
+
+Step 2: Organize your data providing a standardize style
+
+Step 3: Adjust the data types of the variables that were incorrectly identified.
+
+Step 4: Rearrange columns accordingly to your needs
+
+Step 5: Select the relevant variables, rename some column
+
+# Step 1
+
+```{r}
+library(tidyverse)
+data <- read.csv("database_expenses.csv")
+glimpse(data)
+```
+
+Step 2: Standardize Style
+
+There are spacing errors in the character variables
+
+```{r}
+#makes all variable names have lowercase and puts and "_" where there should be spaces
+library(janitor)
+data <- clean_names(data)
+
+```
+
+```{r}
+str(data)
+```
+
+Use str_trim() function to remove whitespaces from beginning and end of a string
+
+```{r}
+#get rid of whitespace in the race and sex variables
+library(stringr)
+
+data$race <- str_trim(data$race)
+data$sex <- str_trim(data$sex)
+```
+
+```{r}
+str(data)
+```
+
+```{r}
+glimpse(data)
+```
+
+```{r}
+library(rmarkdown)
+paged_table(data)
+```
+
+There are problems with race having -1 or -2 in the character.
+
+### gsub( ) function
+
+gsub( ) removes variations like -1 and -2 in the end of some race's information
+
+Write `-\[0-9\]+\$` into your code. This regular expression `\[RegEx\]` that means: use minus sign first for matching with the hyphen you want to remove. Then, `\[0-9\]+` matches one or more digits. The dollar sign ensures that the change will be applied only at the end of the string.
+
+The double quotes when the code ends is to say: "I'll replace what I'm removing with"
+
+If you need to apply in both slides use caret sign `\^` and `\$` do for this.
+
+`\^-\[0-9]+\$`
+
+`\$` means only at the end.
+
+```{r}
+#get rid of -1 and -2 in race variable
+
+data$race <- gsub("-[0-9]+$", "", data$race)
+paged_table(data)
+```
+
+# Step 3
+
+Mutate_at Function
+
+mutate_at is a function in dplyr.
+
+```{r}
+#change variables as a factor
+data <- mutate_at(data, vars(year, race, sex), as.factor)
+paged_table(data)
+```
+
+# Step 4
+
+```{r}
+#secect variables
+data <- data %>% select(sex, age, year, everything()) #everything means keep the rest
+str(data)
+```
+
+Now we need to rename the variables
+
+```{r}
+data <- data %>% rename(gender = sex) %>% select(-c(id, city_code)) #we have another select function to get rid of id and city_code
+paged_table(data)
+```
+
+### Missing Values
+
+```{r}
+#VIM is used to detect missing values
+library(VIM)
+aggr_plot <- aggr(data, col=c('blue', 'red'),
+                  sortVars = TRUE, cex.axis = .7,
+                  ylab = c("histogram of missing data", "Pattern"))
+```
+
+```{r}
+rowscomplet <- complete.cases(data)
+newdata = data[rowscomplet, ]
+#you can do newdata = data[11:90, ], which will chose rows 11 to 90 to work on
+```
+
+```{r}
+paged_table(newdata)
+```
+
+### filter function
+
+```{r}
+#get average medical expenses for each categroy of race
+newdata %>% filter(gender == "Female" & age > 20) %>%
+  select(gender:medical) %>%
+  group_by(race) %>%
+  mutate(newvariable = mean(medical))
+paged_table(newdata)
+```
+
+### Applyng the expore function
+
+Explain can show the decision tree
+
+```{r}
+library(explore)
+explore(newdata)
+```
+
+```{r}
+devtools::install_github("agstn/dataxray")
+library(dataxray)
+newdata %>% make_xray() %>% view_xray
+```
